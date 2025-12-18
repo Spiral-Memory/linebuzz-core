@@ -1,6 +1,4 @@
-
-
-
+--- Initial Configuration ---
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -11,46 +9,19 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
-
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
+--- Extensions ---
 
 CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
-
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
-
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
-
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
-
-
-
-
-
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
 
 
-
-
-
+--- SQL Functions ---
 
 CREATE OR REPLACE FUNCTION "public"."create_message"("p_team_id" "uuid", "p_parent_id" "uuid", "p_content" "text", "p_is_code_thread" boolean DEFAULT false) RETURNS "jsonb"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -651,10 +622,11 @@ end;$$;
 
 ALTER FUNCTION "public"."join_team_with_code"("p_invite_code" "text") OWNER TO "postgres";
 
+--- TABLE SCHEMA ---
+
 SET default_tablespace = '';
 
 SET default_table_access_method = "heap";
-
 
 CREATE TABLE IF NOT EXISTS "public"."invites" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -663,9 +635,7 @@ CREATE TABLE IF NOT EXISTS "public"."invites" (
     "created_by" "uuid" NOT NULL
 );
 
-
 ALTER TABLE "public"."invites" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."messages" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -679,9 +649,7 @@ CREATE TABLE IF NOT EXISTS "public"."messages" (
     "created_at" timestamp with time zone DEFAULT "now"()
 );
 
-
 ALTER TABLE "public"."messages" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."team_data_keys" (
     "encrypted_data_key" "bytea" NOT NULL,
@@ -689,9 +657,7 @@ CREATE TABLE IF NOT EXISTS "public"."team_data_keys" (
     "team_id" "uuid" NOT NULL
 );
 
-
 ALTER TABLE "public"."team_data_keys" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."team_members" (
     "team_id" "uuid" NOT NULL,
@@ -699,9 +665,7 @@ CREATE TABLE IF NOT EXISTS "public"."team_members" (
     "role" "text"
 );
 
-
 ALTER TABLE "public"."team_members" OWNER TO "postgres";
-
 
 CREATE TABLE IF NOT EXISTS "public"."teams" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
@@ -710,88 +674,56 @@ CREATE TABLE IF NOT EXISTS "public"."teams" (
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
 
-
 ALTER TABLE "public"."teams" OWNER TO "postgres";
-
 
 ALTER TABLE ONLY "public"."invites"
     ADD CONSTRAINT "invites_code_key" UNIQUE ("code");
 
-
-
 ALTER TABLE ONLY "public"."invites"
     ADD CONSTRAINT "invites_pkey" PRIMARY KEY ("id");
-
-
 
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."team_data_keys"
     ADD CONSTRAINT "team_data_keys_pkey" PRIMARY KEY ("team_id");
-
-
 
 ALTER TABLE ONLY "public"."team_members"
     ADD CONSTRAINT "team_members_pkey" PRIMARY KEY ("team_id", "user_id");
 
-
-
 ALTER TABLE ONLY "public"."teams"
     ADD CONSTRAINT "teams_name_created_by_unique" UNIQUE ("name", "created_by");
-
-
 
 ALTER TABLE ONLY "public"."teams"
     ADD CONSTRAINT "teams_pkey" PRIMARY KEY ("id");
 
-
-
 ALTER TABLE ONLY "public"."invites"
     ADD CONSTRAINT "invites_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."invites"
     ADD CONSTRAINT "invites_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."messages"
     ADD CONSTRAINT "messages_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id");
 
-
-
 ALTER TABLE ONLY "public"."team_data_keys"
     ADD CONSTRAINT "team_data_keys_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."team_members"
     ADD CONSTRAINT "team_members_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
-
-
 ALTER TABLE ONLY "public"."team_members"
     ADD CONSTRAINT "team_members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
-
-
 
 ALTER TABLE ONLY "public"."teams"
     ADD CONSTRAINT "teams_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
-
+--- Row Level Security ---
 
 ALTER TABLE "public"."invites" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."messages" ENABLE ROW LEVEL SECURITY;
 
 
@@ -799,30 +731,11 @@ CREATE POLICY "team members can read messages" ON "public"."messages" FOR SELECT
    FROM "public"."team_members" "tm"
   WHERE (("tm"."team_id" = "messages"."team_id") AND ("tm"."user_id" = "auth"."uid"())))));
 
-
-
 ALTER TABLE "public"."team_data_keys" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."team_members" ENABLE ROW LEVEL SECURITY;
-
-
 ALTER TABLE "public"."teams" ENABLE ROW LEVEL SECURITY;
-
-
 CREATE POLICY "users can read own memberships" ON "public"."team_members" FOR SELECT USING (("user_id" = "auth"."uid"()));
-
-
-
-
-
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
-
-
-
-
-
-
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."messages";
 
 
@@ -831,294 +744,49 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 GRANT ALL ON FUNCTION "public"."create_message"("p_team_id" "uuid", "p_parent_id" "uuid", "p_content" "text", "p_is_code_thread" boolean) TO "anon";
 GRANT ALL ON FUNCTION "public"."create_message"("p_team_id" "uuid", "p_parent_id" "uuid", "p_content" "text", "p_is_code_thread" boolean) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_message"("p_team_id" "uuid", "p_parent_id" "uuid", "p_content" "text", "p_is_code_thread" boolean) TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."create_team_and_invite"("team_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_team_and_invite"("team_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_team_and_invite"("team_name" "text") TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."get_message_by_id"("p_team_id" "uuid", "p_message_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_message_by_id"("p_team_id" "uuid", "p_message_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_message_by_id"("p_team_id" "uuid", "p_message_id" "uuid") TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."get_messages"("p_team_id" "uuid", "p_limit" integer, "p_offset" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_messages"("p_team_id" "uuid", "p_limit" integer, "p_offset" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_messages"("p_team_id" "uuid", "p_limit" integer, "p_offset" integer) TO "service_role";
-
-
-
 GRANT ALL ON FUNCTION "public"."join_team_with_code"("p_invite_code" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."join_team_with_code"("p_invite_code" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."join_team_with_code"("p_invite_code" "text") TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 GRANT ALL ON TABLE "public"."invites" TO "anon";
 GRANT ALL ON TABLE "public"."invites" TO "authenticated";
 GRANT ALL ON TABLE "public"."invites" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."messages" TO "anon";
 GRANT ALL ON TABLE "public"."messages" TO "authenticated";
 GRANT ALL ON TABLE "public"."messages" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."team_data_keys" TO "anon";
 GRANT ALL ON TABLE "public"."team_data_keys" TO "authenticated";
 GRANT ALL ON TABLE "public"."team_data_keys" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."team_members" TO "anon";
 GRANT ALL ON TABLE "public"."team_members" TO "authenticated";
 GRANT ALL ON TABLE "public"."team_members" TO "service_role";
-
-
-
 GRANT ALL ON TABLE "public"."teams" TO "anon";
 GRANT ALL ON TABLE "public"."teams" TO "authenticated";
 GRANT ALL ON TABLE "public"."teams" TO "service_role";
-
-
-
-
-
-
-
-
 
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
-
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
-
-
-
-
-
-
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 drop extension if exists "pg_net";
 
