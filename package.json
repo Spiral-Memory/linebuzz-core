@@ -1,0 +1,23 @@
+{
+  "name": "linebuzz-core",
+  "version": "1.0.0",
+  "description": "the engine for linebuzz",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Spiral-Memory/linebuzz-core.git"
+  },
+  "author": "Zishan Ahmad",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Spiral-Memory/linebuzz-core/issues"
+  },
+  "homepage": "https://github.com/Spiral-Memory/linebuzz-core#readme",
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "@types/node": "*"
+  }
+}
