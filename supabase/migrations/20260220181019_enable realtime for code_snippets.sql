@@ -315,5 +315,6 @@ using ((EXISTS ( SELECT 1
    FROM public.team_members tm
   WHERE ((tm.team_id = code_snippets.team_id) AND (tm.user_id = auth.uid())))));
 
+ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."code_snippets";
 
 
