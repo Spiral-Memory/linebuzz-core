@@ -1,4 +1,121 @@
+create schema if not exists "internal";
+
+
+  create table "internal"."bip39_words" (
+    "id" integer not null,
+    "word" text not null
+      );
+
+
+alter table "internal"."bip39_words" enable row level security;
+
+CREATE UNIQUE INDEX bip39_words_pkey ON internal.bip39_words USING btree (id);
+
+CREATE INDEX idx_bip39_words_id ON internal.bip39_words USING btree (id);
+
+alter table "internal"."bip39_words" add constraint "bip39_words_pkey" PRIMARY KEY using index "bip39_words_pkey";
+
 set check_function_bodies = off;
+
+CREATE OR REPLACE FUNCTION public.create_team_and_invite(team_name text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$declare
+    new_team_id uuid;
+    invite_code text;
+    is_code_unique boolean := false;
+    current_user_id uuid := auth.uid();
+    v_master_key text;
+    v_data_key bytea;
+    v_encrypted_data_key bytea;
+begin
+    -- 1. Check Authentication (Error: UNAUTH)
+    if current_user_id is null then
+        return jsonb_build_object(
+            'status', 'error',
+            'code', 'UNAUTH',
+            'message', 'Authentication is required to create a team.'
+        );
+    end if;
+
+    -- 2. Retrieve Master Key from Vault
+    select decrypted_secret into v_master_key
+    from vault.decrypted_secrets
+    where name = 'app_master_key_latest'; -- Ensure this matches the name you used in vault.
+
+    -- Safety check: Ensure key exists
+    if v_master_key is null then
+        return jsonb_build_object(
+            'status', 'error',
+            'code', 'SERVER_CONFIG_ERROR',
+            'message', 'Encryption configuration missing.'
+        );
+    end if;
+    
+    -- 3. Create the new team
+    insert into public.teams (name, created_by)
+    values (team_name, current_user_id)
+    returning id into new_team_id;
+
+    -- 4. Add the creator as the 'admin' team member
+    insert into public.team_members (team_id, user_id, role)
+    values (new_team_id, current_user_id, 'admin');
+
+    -- 5. Create per team data key
+    v_data_key := gen_random_bytes(32);
+
+    -- Encrypt with latest master key
+    v_encrypted_data_key := extensions.pgp_sym_encrypt_bytea(
+        v_data_key,
+        v_master_key -- Using the variable instead of current_setting
+    );
+
+    -- Insert into team_data_keys
+    insert into public.team_data_keys (
+        team_id,
+        encrypted_data_key
+    ) values (
+        new_team_id,
+        v_encrypted_data_key
+    );
+
+    -- 5. Generate a unique 5 word invite code
+    while not is_code_unique loop
+        SELECT string_agg(word, '-') INTO invite_code
+        FROM (
+            SELECT word FROM internal.bip39_words 
+            ORDER BY random() 
+            LIMIT 5
+        ) AS secure_words;
+
+        begin
+            insert into public.invites (team_id, code, created_by)
+            values (
+                new_team_id, 
+                extensions.crypt(invite_code, extensions.gen_salt('bf')), 
+                current_user_id
+            );
+
+            is_code_unique := true;
+        exception
+            when unique_violation then
+                null; 
+        end;
+    end loop;
+
+    -- 6. Return success
+    return jsonb_build_object(
+        'status', 'success',
+        'code', 'TEAM_CREATED',
+        'team_id', new_team_id,
+        'team_name', team_name,
+        'invite_code', invite_code,
+        'message', 'Team created successfully and invite code generated.'
+    );
+    
+end;$function$
+;
 
 CREATE OR REPLACE FUNCTION public.get_code_discussions(p_team_id uuid, p_remote_url text, p_file_path text)
  RETURNS jsonb
@@ -305,15 +422,72 @@ begin
 end;$function$
 ;
 
+CREATE OR REPLACE FUNCTION public.join_team_with_code(p_invite_code text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$declare
+    team_to_join_id uuid;
+    current_user_id uuid := auth.uid();
+    existing_member_role text;
+    team_name text;
+begin
+    -- 1. Check Authentication (Error: UNAUTH)
+    if current_user_id is null then
+        return jsonb_build_object(
+            'status', 'error',
+            'code', 'UNAUTH',
+            'message', 'Authentication is required to join a team.'
+        );
+    end if;
 
-  create policy "team can read code snippets"
-  on "public"."code_snippets"
-  as permissive
-  for select
-  to public
-using ((EXISTS ( SELECT 1
-   FROM public.team_members tm
-  WHERE ((tm.team_id = code_snippets.team_id) AND (tm.user_id = auth.uid())))));
+    -- 2. Find the team associated with the invite code
+    select i.team_id, t.name
+    into team_to_join_id, team_name
+    from public.invites i
+    join public.teams t ON i.team_id = t.id
+    where i.code = extensions.crypt(lower(trim(p_invite_code)), i.code);
 
+    -- 3. Check for invalid code (Error: INVALID_CODE)
+    if team_to_join_id is null then
+        return jsonb_build_object(
+            'status', 'error',
+            'code', 'INVALID_CODE',
+            'message', 'Invalid invite code or the invite has expired.'
+        );
+    end if;
+
+    -- 4. Check if the user is already a member
+    select role
+    into existing_member_role
+    from public.team_members
+    where team_id = team_to_join_id and user_id = current_user_id;
+
+    -- 5. Handle already a member (Warning: ALREADY_MEMBER)
+    if existing_member_role is not null then
+        return jsonb_build_object(
+            'status', 'warning',
+            'code', 'ALREADY_MEMBER',
+            'team_id', team_to_join_id,
+            'team_name', team_name,
+            'role', existing_member_role,
+            'message', 'You are already a member of this team.'
+        );
+    end if;
+
+    -- 6. Add the user to the team
+    insert into public.team_members (team_id, user_id, role)
+    values (team_to_join_id, current_user_id, 'member');
+
+    -- 7. Return success
+    return jsonb_build_object(
+        'status', 'success',
+        'code', 'JOINED',
+        'team_id', team_to_join_id,
+        'team_name', team_name,
+        'message', 'Successfully joined team.'
+    );
+end;$function$
+;
 
 
