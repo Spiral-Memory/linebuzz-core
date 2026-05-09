@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   const state = url.searchParams.get("state");
 
   if (!code || !state) {
-    return new Response("Error: Missing code or state parameters.", { status: 400 });
+    return new Response("Error: Missing code or state.", { status: 400 });
   }
 
   try {
@@ -27,31 +27,38 @@ Deno.serve(async (req) => {
     });
 
     const oauthData = await slackRes.json();
+    if (!oauthData.ok) return new Response(`OAuth Error: ${oauthData.error}`, { status: 400 });
 
-    if (!oauthData.ok) {
-      return new Response(`Slack OAuth Error: ${oauthData.error}`, { status: 400 });
-    }
+    const accessToken = oauthData.access_token;
+
+    const channelsRes = await fetch("https://slack.com/api/conversations.list?types=public_channel,private_channel", {
+      headers: { "Authorization": `Bearer ${accessToken}` }
+    });
+    
+    const channelsData = await channelsRes.json();
+    
+    const channelList = (channelsData.channels || []).map((c: any) => ({
+      id: c.id,
+      name: c.name,
+    }));
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     const { data, error } = await supabase.rpc("install_slack", {
       p_state: state,
-      p_access_token: oauthData.access_token,
+      p_access_token: accessToken,
+      p_channels: channelList
     });
 
     if (error || data?.status === "error") {
-      console.error("Handshake Failed:", error || data?.message);
-      return new Response(data?.message || "Verification failed. Please try again.", { status: 403 });
+      return new Response(data?.message || "Verification failed.", { status: 403 });
     }
 
-    
     return new Response("Success! Linebuzz is now connected to Slack. You can safely close this tab and return to your IDE to select your sync channel.", {
       status: 200,
       headers: { "Content-Type": "text/plain" }
     });
 
   } catch (err) {
-    console.error("System Exception:", err);
     return new Response("Internal Server Error", { status: 500 });
   }
 });
