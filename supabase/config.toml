@@ -381,12 +381,18 @@ s3_access_key = "env(S3_ACCESS_KEY)"
 # Configures AWS_SECRET_ACCESS_KEY for S3 bucket
 s3_secret_key = "env(S3_SECRET_KEY)"
 
-[functions.slack-bridge]
+[functions.slack-listener]
 enabled = true
 verify_jwt = false
-entrypoint = "./functions/slack-bridge/index.ts"
+entrypoint = "./functions/slack-listener/index.ts"
 
 [functions.slack-install]
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/slack-install/index.ts"
+
+
+[functions.slack-notify]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/slack-notify/index.ts"
