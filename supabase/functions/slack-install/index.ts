@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     });
 
     if (error || data?.status === "error") {
+      console.log(error)
       return new Response(data?.message || "Verification failed.", { status: 403 });
     }
 
