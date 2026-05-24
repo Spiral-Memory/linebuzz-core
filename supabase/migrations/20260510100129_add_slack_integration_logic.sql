@@ -45,6 +45,10 @@ alter table "public"."integration_oauth_states" add constraint "integration_oaut
 
 alter table "public"."team_integrations" add constraint "team_integrations_pkey" PRIMARY KEY using index "team_integrations_pkey";
 
+alter table "public"."team_integrations" add constraint "team_integrations_team_id_fkey" FOREIGN KEY (team_id) REFERENCES public.teams(id) ON DELETE CASCADE not valid;
+
+alter table "public"."team_integrations" validate constraint "team_integrations_team_id_fkey";
+
 alter table "public"."integration_oauth_states" add constraint "integration_oauth_states_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE not valid;
 
 alter table "public"."integration_oauth_states" validate constraint "integration_oauth_states_user_id_fkey";
