@@ -33,6 +33,6 @@ ON CONFLICT (id) DO UPDATE SET
 
 
 INSERT INTO internal.app_settings (key, value)
-VALUES ('slack_bot_id', '"00000000-0000-0000-0000-000000000001"')
+VALUES ('slack_bot_id', '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (key) 
 DO UPDATE SET value = EXCLUDED.value;
