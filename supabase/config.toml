@@ -396,3 +396,6 @@ entrypoint = "./functions/slack-install/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/slack-notify/index.ts"
+
+[experimental.pgdelta]
+enabled = true

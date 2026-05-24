@@ -1,10 +1,11 @@
--- Create the get_slack_token database function (callable only by service_role)
-CREATE OR REPLACE FUNCTION public.get_slack_token(p_team_id uuid)
- RETURNS text
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'internal', 'extensions', 'vault'
-AS $function$declare
+CREATE FUNCTION public.get_slack_token (
+  p_team_id uuid
+)
+  RETURNS text
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path TO 'public', 'internal', 'extensions', 'vault'
+  AS $function$declare
     v_token_ciphertext bytea;
     v_enc_dk bytea;
     v_data_key bytea;
@@ -53,3 +54,9 @@ begin
         'utf8'
     );
 end;$function$;
+
+GRANT ALL ON FUNCTION public.get_slack_token(uuid) TO anon;
+
+GRANT ALL ON FUNCTION public.get_slack_token(uuid) TO authenticated;
+
+GRANT ALL ON FUNCTION public.get_slack_token(uuid) TO service_role;

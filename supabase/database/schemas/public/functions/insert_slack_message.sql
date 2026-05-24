@@ -1,14 +1,13 @@
--- Update insert_slack_message to support robust event-based deduplication
-CREATE OR REPLACE FUNCTION public.insert_slack_message(
-    p_team_id uuid, 
-    p_content text, 
-    p_source_metadata jsonb
+CREATE FUNCTION public.insert_slack_message (
+  p_team_id         uuid,
+  p_content         text,
+  p_source_metadata jsonb
 )
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public', 'internal', 'extensions', 'vault'
-AS $function$declare
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path TO 'public', 'internal', 'extensions', 'vault'
+  AS $function$declare
     v_user_id uuid; -- Resolved dynamically from internal.app_settings
     
     ---Message Info ----
@@ -161,3 +160,9 @@ begin
         )
     );
 end;$function$;
+
+GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb) TO anon;
+
+GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb) TO authenticated;
+
+GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb) TO service_role;

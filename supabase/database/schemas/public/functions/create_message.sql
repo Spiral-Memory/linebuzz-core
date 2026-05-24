@@ -1,16 +1,15 @@
--- Recreate create_message to return quoted message source and source_metadata
-CREATE OR REPLACE FUNCTION public.create_message(
-    p_team_id uuid, 
-    p_content text, 
-    p_parent_id uuid DEFAULT NULL::uuid, 
-    p_quoted_id uuid DEFAULT NULL::uuid, 
-    p_attachments jsonb DEFAULT '[]'::jsonb,
-    p_sync_to_slack boolean DEFAULT false
+CREATE FUNCTION public.create_message (
+  p_team_id       uuid,
+  p_content       text,
+  p_parent_id     uuid    DEFAULT NULL::uuid,
+  p_quoted_id     uuid    DEFAULT NULL::uuid,
+  p_attachments   jsonb   DEFAULT '[]'::jsonb,
+  p_sync_to_slack boolean DEFAULT false
 )
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$declare
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  AS $function$declare
     v_user_id uuid := auth.uid();
     v_avatar_url text;
     v_display_name text;
@@ -278,3 +277,9 @@ begin
         )
     );
 end;$function$;
+
+GRANT ALL ON FUNCTION public.create_message(uuid, text, uuid, uuid, jsonb, boolean) TO anon;
+
+GRANT ALL ON FUNCTION public.create_message(uuid, text, uuid, uuid, jsonb, boolean) TO authenticated;
+
+GRANT ALL ON FUNCTION public.create_message(uuid, text, uuid, uuid, jsonb, boolean) TO service_role;

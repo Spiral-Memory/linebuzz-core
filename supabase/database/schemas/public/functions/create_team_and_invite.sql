@@ -1,12 +1,10 @@
-create extension if not exists "pg_cron" with schema "pg_catalog";
-
-set check_function_bodies = off;
-
-CREATE OR REPLACE FUNCTION public.create_team_and_invite(team_name text)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
-AS $function$declare
+CREATE FUNCTION public.create_team_and_invite (
+  team_name text
+)
+  RETURNS jsonb
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  AS $function$declare
     new_team_id uuid;
     invite_code text;
     is_code_unique boolean := false;
@@ -100,8 +98,10 @@ begin
         'message', 'Team created successfully and invite code generated.'
     );
     
-end;$function$
-;
+end;$function$;
 
+GRANT ALL ON FUNCTION public.create_team_and_invite(text) TO anon;
 
-ALTER PUBLICATION supabase_realtime ADD TABLE public.team_integrations;
+GRANT ALL ON FUNCTION public.create_team_and_invite(text) TO authenticated;
+
+GRANT ALL ON FUNCTION public.create_team_and_invite(text) TO service_role;
