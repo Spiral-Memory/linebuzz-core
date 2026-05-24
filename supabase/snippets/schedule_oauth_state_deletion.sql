@@ -1,3 +1,5 @@
+create extension if not exists pg_cron;
+
 select cron.schedule(
   'cleanup-expired-oauth-states',
   '*/15 * * * *', -- Runs every 15 minutes
@@ -8,4 +10,3 @@ select cron.schedule(
 );
 
 
-create extension if not exists pg_cron;
