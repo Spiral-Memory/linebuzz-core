@@ -91,7 +91,9 @@ Deno.serve(async (req) => {
               display_name: name,
               username: name,
               avatar_url: avatar,
-              slack_user_id: ev.user
+              slack_user_id: ev.user,
+              slack_event_id: body.event_id,
+              slack_event_ts: ev.event_ts
             }
           });
 
