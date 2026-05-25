@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
                 const vscodeLink = `<vscode://SpiralMemory.linebuzz/open?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}|Open in VS Code>`
                 const links = [vscodeLink, githubLink].filter(Boolean).join(' | ')
 
-                finalMessage += `\n\n*Ref: _${snip.file_path}_ (Lines ${snip.start_line} - ${snip.end_line})*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
+                finalMessage += `\n\n*Ref: ${snip.file_path}:${snip.start_line}-${snip.end_line})*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
             }
         }
 
