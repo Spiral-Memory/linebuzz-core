@@ -44,7 +44,6 @@ Deno.serve(async (req) => {
 
     // 3. Process Incoming Chat Messages
     const ev = body.event;
-    console.log("Slack event:", ev);
     if (ev?.type === "message" && ev.text && ev.user && !ev.bot_id && !ev.subtype) {
       // Find connected team ID
       const { data: int, error: intError } = await supabase
@@ -58,8 +57,6 @@ Deno.serve(async (req) => {
         console.error("Error fetching team integration:", intError);
       }
 
-      console.log("Found integration:", int);
-
       if (int) {
         // Retrieve decrypted Slack token securely
         const { data: token, error: tokenError } = await supabase.rpc("get_slack_token", { p_team_id: int.team_id });
@@ -69,7 +66,6 @@ Deno.serve(async (req) => {
         }
 
         if (token) {
-          console.log("Decrypted Slack token retrieved successfully");
           // Retrieve sender details from Slack API
           const slackRes = await fetch(`https://slack.com/api/users.info?user=${ev.user}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -98,7 +94,6 @@ Deno.serve(async (req) => {
             if (parentMsg) {
               parentId = parentMsg.id;
               quotedId = parentMsg.id;
-              console.log("Mapped Slack thread reply to Linebuzz quote. Parent message:", parentId);
             }
           } else {
             // Case B: This is a normal message. Look for quote attachments if any.

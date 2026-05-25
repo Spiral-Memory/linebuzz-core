@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
 
         const { payload } = data
 
+        // Handle quoted message
         let finalMessage = payload.decrypted_message
         if (payload.quoted_message) {
             const quoteLines = payload.quoted_message.content
@@ -36,6 +37,30 @@ Deno.serve(async (req) => {
                 .map((line: string) => `> ${line}`)
                 .join('\n')
             finalMessage += `\n\n> *${payload.quoted_message.user_name}*\n${quoteLines}`
+        }
+
+        // Handle code snippets
+        if (payload.code_snippets && payload.code_snippets.length > 0) {
+            for (const snip of payload.code_snippets) {
+                const extension = snip.file_path.split('.').pop() || ''
+
+                let cleanUrl = snip.remote_url ? snip.remote_url.trim() : ''
+                let githubLink = ''
+                if (cleanUrl) {
+                    if (cleanUrl.startsWith('git@')) {
+                        cleanUrl = cleanUrl.replace(':', '/').replace('git@', 'https://')
+                    }
+                    if (cleanUrl.endsWith('.git')) {
+                        cleanUrl = cleanUrl.slice(0, -4)
+                    }
+                    githubLink = `<${cleanUrl}/blob/main/${snip.file_path}#L${snip.start_line}-L${snip.end_line}|Open on GitHub>`
+                }
+
+                const vscodeLink = `<vscode://SpiralMemory.linebuzz/open?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}|Open in VS Code>`
+                const links = [vscodeLink, githubLink].filter(Boolean).join(' | ')
+
+                finalMessage += `\n\n*Ref: _${snip.file_path}_ (Lines ${snip.start_line} - ${snip.end_line})*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
+            }
         }
 
         const messageBody = {

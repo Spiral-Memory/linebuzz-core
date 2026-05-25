@@ -1,11 +1,10 @@
-CREATE FUNCTION public.get_slack_payload (
-  p_message_id uuid
-)
-  RETURNS jsonb
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path TO 'public', 'internal', 'extensions', 'vault'
-  AS $function$declare
+SET check_function_bodies = false;
+CREATE OR REPLACE FUNCTION public.get_slack_payload(p_message_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'internal', 'extensions', 'vault'
+AS $function$declare
     -- Context Variables
     v_team_id uuid;
     v_user_id uuid;
@@ -34,7 +33,12 @@ CREATE FUNCTION public.get_slack_payload (
     v_quoted_metadata jsonb;
 
     -- Code snippet decryption variables
-    v_code_snippets_json jsonb;
+    v_code_snippet_content text;
+    v_code_snippet_path text;
+    v_code_snippet_start int;
+    v_code_snippet_end int;
+    v_code_snippet_remote_url text;
+    v_code_snippet_ciphertext bytea;
 begin
     --------------------------------------------------------------------
     -- 1. Service Role Gate
@@ -153,28 +157,30 @@ begin
     end if;
 
     --------------------------------------------------------------------
-    -- 4c. Code Snippets Lookup and Decryption
+    -- 4c. Code Snippet Lookup and Decryption
     --------------------------------------------------------------------
     select 
-        coalesce(
-            jsonb_agg(
-                jsonb_build_object(
-                    'file_path', s.file_path,
-                    'start_line', s.start_line,
-                    'end_line', s.end_line,
-                    'remote_url', s.remote_url,
-                    'content', convert_from(
-                        extensions.pgp_sym_decrypt_bytea(s.snippet_ciphertext, encode(v_data_key, 'base64')), 
-                        'utf8'
-                    )
-                )
-            ),
-            '[]'::jsonb
-        )
+        file_path,
+        start_line,
+        end_line,
+        remote_url,
+        snippet_ciphertext
     into 
-        v_code_snippets_json
-    from public.code_snippets s
-    where s.message_id = p_message_id;
+        v_code_snippet_path,
+        v_code_snippet_start,
+        v_code_snippet_end,
+        v_code_snippet_remote_url,
+        v_code_snippet_ciphertext
+    from public.code_snippets
+    where message_id = p_message_id
+    limit 1;
+
+    if v_code_snippet_ciphertext is not null then
+        v_code_snippet_content := convert_from(
+            extensions.pgp_sym_decrypt_bytea(v_code_snippet_ciphertext, encode(v_data_key, 'base64')), 
+            'utf8'
+        );
+    end if;
 
     --------------------------------------------------------------------
     -- 5. Final Decryption and Assembly
@@ -192,7 +198,16 @@ begin
                 )
                 else null
             end,
-            'code_snippets', v_code_snippets_json,
+            'code_snippet', case 
+                when v_code_snippet_content is not null then jsonb_build_object(
+                    'file_path', v_code_snippet_path,
+                    'start_line', v_code_snippet_start,
+                    'end_line', v_code_snippet_end,
+                    'remote_url', v_code_snippet_remote_url,
+                    'content', v_code_snippet_content
+                )
+                else null
+            end,
             -- Phase 2: Decrypt the Token and Message using the Data Key
             'decrypted_token', convert_from(
                 extensions.pgp_sym_decrypt_bytea(v_token_ciphertext, encode(v_data_key, 'base64')), 
@@ -205,9 +220,3 @@ begin
         )
     );
 end;$function$;
-
-GRANT ALL ON FUNCTION public.get_slack_payload(uuid) TO anon;
-
-GRANT ALL ON FUNCTION public.get_slack_payload(uuid) TO authenticated;
-
-GRANT ALL ON FUNCTION public.get_slack_payload(uuid) TO service_role;
