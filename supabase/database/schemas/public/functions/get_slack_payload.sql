@@ -22,6 +22,16 @@ CREATE FUNCTION public.get_slack_payload (
     v_display_name text;
     v_username text;
     v_avatar_url text;
+
+    -- Quoted message decryption variables
+    v_quoted_id uuid;
+    v_quoted_ciphertext bytea;
+    v_quoted_user_id uuid;
+    v_quoted_display_name text;
+    v_quoted_username text;
+    v_quoted_msg text;
+    v_quoted_source text;
+    v_quoted_metadata jsonb;
 begin
     --------------------------------------------------------------------
     -- 1. Service Role Gate
@@ -43,12 +53,14 @@ begin
         m.team_id, 
         m.user_id, 
         m.content_ciphertext, 
+        m.quoted_id,
         ti.access_token, 
         ti.settings->>'active_channel_id'
     into 
         v_team_id, 
         v_user_id, 
         v_msg_ciphertext, 
+        v_quoted_id,
         v_token_ciphertext, 
         v_slack_channel_id
     from public.messages m
@@ -101,6 +113,43 @@ begin
     from auth.users where id = v_user_id;
 
     --------------------------------------------------------------------
+    -- 4b. Quoted Message Lookup and Decryption
+    --------------------------------------------------------------------
+    if v_quoted_id is not null then
+        select 
+            content_ciphertext,
+            user_id,
+            source,
+            source_metadata
+        into 
+            v_quoted_ciphertext,
+            v_quoted_user_id,
+            v_quoted_source,
+            v_quoted_metadata
+        from public.messages
+        where id = v_quoted_id;
+
+        if v_quoted_ciphertext is not null then
+            v_quoted_msg := convert_from(
+                extensions.pgp_sym_decrypt_bytea(v_quoted_ciphertext, encode(v_data_key, 'base64')), 
+                'utf8'
+            );
+
+            if v_quoted_source = 'slack' and v_quoted_metadata ? 'username' then
+                v_quoted_username := v_quoted_metadata ->> 'username';
+            else
+                select 
+                    raw_user_meta_data ->> 'display_name',
+                    raw_user_meta_data ->> 'username'
+                into 
+                    v_quoted_display_name, 
+                    v_quoted_username
+                from auth.users where id = v_quoted_user_id;
+            end if;
+        end if;
+    end if;
+
+    --------------------------------------------------------------------
     -- 5. Final Decryption and Assembly
     --------------------------------------------------------------------
     return jsonb_build_object(
@@ -109,6 +158,13 @@ begin
             'channel_id', v_slack_channel_id,
             'user_name', coalesce(v_username, v_display_name, 'Buzz Member'),
             'user_avatar_url', v_avatar_url,
+            'quoted_message', case 
+                when v_quoted_msg is not null then jsonb_build_object(
+                    'user_name', coalesce(v_quoted_username, v_quoted_display_name, 'Buzz Member'),
+                    'content', v_quoted_msg
+                )
+                else null
+            end,
             -- Phase 2: Decrypt the Token and Message using the Data Key
             'decrypted_token', convert_from(
                 extensions.pgp_sym_decrypt_bytea(v_token_ciphertext, encode(v_data_key, 'base64')), 

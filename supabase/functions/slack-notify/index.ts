@@ -29,6 +29,15 @@ Deno.serve(async (req) => {
 
         const { payload } = data
 
+        let finalMessage = payload.decrypted_message
+        if (payload.quoted_message) {
+            const quoteLines = payload.quoted_message.content
+                .split('\n')
+                .map((line: string) => `> ${line}`)
+                .join('\n')
+            finalMessage += `\n\n> *${payload.quoted_message.user_name}*\n${quoteLines}`
+        }
+
         const messageBody = {
             channel: payload.channel_id,
             username: payload.user_name,
@@ -38,7 +47,7 @@ Deno.serve(async (req) => {
                     type: "section",
                     text: {
                         type: "mrkdwn",
-                        text: payload.decrypted_message
+                        text: finalMessage
                     }
                 },
                 {
@@ -94,6 +103,23 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: `Slack delivery failed: ${slackData.error}` }), { status: 500 })
         }
         console.log('Slack delivery successful')
+
+        // Update the original message's source_metadata to store the Slack timestamp (ts)
+        if (slackData.ts) {
+            console.log('Updating message source_metadata with Slack ts:', slackData.ts)
+            const updatedMetadata = {
+                ...(record.source_metadata || {}),
+                slack_event_ts: slackData.ts
+            }
+            await supabase
+                .from('messages')
+                .update({
+                    source: 'slack',
+                    source_metadata: updatedMetadata
+                })
+                .eq('id', record.id)
+        }
+
         return new Response(JSON.stringify({ status: 'success' }), { status: 200 })
 
     } catch (err) {

@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     // 3. Process Incoming Chat Messages
     const ev = body.event;
     console.log("Slack event:", ev);
-    if (ev?.type === "message" && ev.text && ev.user && !ev.bot_id && ev.subtype !== "bot_message") {
+    if (ev?.type === "message" && ev.text && ev.user && !ev.bot_id && !ev.subtype) {
       // Find connected team ID
       const { data: int, error: intError } = await supabase
         .from("team_integrations")
@@ -83,6 +83,46 @@ Deno.serve(async (req) => {
           const name = profile?.display_name || profile?.real_name || slackRes.user?.name || "Slack User";
           const avatar = profile?.image_48 || profile?.image_72 || "";
 
+          // Handle thread replies and quoted messages
+          let quotedId: string | null = null;
+          let parentId: string | null = null;
+
+          if (ev.thread_ts) {
+            // Case A: This is a thread reply.
+            const { data: parentMsg } = await supabase
+              .from("messages")
+              .select("id")
+              .eq("source_metadata->>slack_event_ts", ev.thread_ts)
+              .maybeSingle();
+
+            if (parentMsg) {
+              parentId = parentMsg.id;
+              quotedId = parentMsg.id;
+              console.log("Mapped Slack thread reply to Linebuzz quote. Parent message:", parentId);
+            }
+          } else {
+            // Case B: This is a normal message. Look for quote attachments if any.
+            const quotedAttachment = ev.attachments?.find((att: any) => att.from_url);
+
+            if (quotedAttachment?.from_url) {
+              const match = quotedAttachment.from_url.match(/archives\/[^\/]+\/p(\d+)/);
+              if (match) {
+                const rawTs = match[1];
+                const slackEventTs = `${rawTs.slice(0, 10)}.${rawTs.slice(10)}`;
+
+                const { data: quotedMsg } = await supabase
+                  .from("messages")
+                  .select("id")
+                  .eq("source_metadata->>slack_event_ts", slackEventTs)
+                  .maybeSingle();
+
+                if (quotedMsg) {
+                  quotedId = quotedMsg.id;
+                }
+              }
+            }
+          }
+
           // Securely encrypt and insert bridged message
           const { data: insertRes, error: insertError } = await supabase.rpc("insert_slack_message", {
             p_team_id: int.team_id,
@@ -94,7 +134,9 @@ Deno.serve(async (req) => {
               slack_user_id: ev.user,
               slack_event_id: body.event_id,
               slack_event_ts: ev.event_ts
-            }
+            },
+            p_quoted_id: quotedId || undefined,
+            p_parent_id: parentId || undefined
           });
 
           if (insertError) {

@@ -1,7 +1,9 @@
-CREATE FUNCTION public.insert_slack_message (
+CREATE OR REPLACE FUNCTION public.insert_slack_message (
   p_team_id         uuid,
   p_content         text,
-  p_source_metadata jsonb
+  p_source_metadata jsonb,
+  p_quoted_id       uuid DEFAULT NULL::uuid,
+  p_parent_id       uuid DEFAULT NULL::uuid
 )
   RETURNS jsonb
   LANGUAGE plpgsql
@@ -112,7 +114,15 @@ begin
         v_hash:= null;
     end if;
 
-    v_thread_id := gen_random_uuid();
+    if p_parent_id is not null then
+        select coalesce(thread_id, id) into v_thread_id 
+        from public.messages 
+        where id = p_parent_id;
+    end if;
+
+    if v_thread_id is null then
+        v_thread_id := gen_random_uuid();
+    end if;
 
     --------------------------------------------------------------------
     -- Insert message with source = 'slack' and metadata
@@ -121,18 +131,22 @@ begin
         team_id,
         user_id,
         thread_id,
+        parent_id,
         content_ciphertext,
         content_hash,
         source,
-        source_metadata
+        source_metadata,
+        quoted_id
     ) values (
         p_team_id,
         v_user_id,
         v_thread_id,
+        p_parent_id,
         v_cipher,
         v_hash,
         'slack',
-        p_source_metadata
+        p_source_metadata,
+        p_quoted_id
     )
     returning id, created_at into v_message_id, v_created_at;
 
@@ -145,12 +159,13 @@ begin
         'message', jsonb_build_object(
             'message_id', v_message_id,
             'thread_id', v_thread_id,
-            'parent_id', null,
+            'parent_id', p_parent_id,
             'content', p_content,
             'created_at', v_created_at,
             'attachments', '[]'::jsonb,
             'source', 'slack',
             'source_metadata', p_source_metadata,
+            'quoted_id', p_quoted_id,
             'u', jsonb_build_object(
                 'user_id', v_user_id,
                 'username', p_source_metadata ->> 'username',
@@ -161,8 +176,8 @@ begin
     );
 end;$function$;
 
-GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb) TO anon;
+GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb, uuid, uuid) TO anon;
 
-GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb) TO authenticated;
+GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb, uuid, uuid) TO authenticated;
 
-GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb) TO service_role;
+GRANT ALL ON FUNCTION public.insert_slack_message(uuid, text, jsonb, uuid, uuid) TO service_role;
