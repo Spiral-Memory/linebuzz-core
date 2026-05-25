@@ -31,13 +31,24 @@ Deno.serve(async (req) => {
 
         const messageBody = {
             channel: payload.channel_id,
+            username: payload.user_name,
+            icon_url: payload.user_avatar_url || undefined,
             blocks: [
                 {
                     type: "section",
                     text: {
                         type: "mrkdwn",
-                        text: `*${payload.user_name}*\n${payload.decrypted_message}`
+                        text: payload.decrypted_message
                     }
+                },
+                {
+                    type: "context",
+                    elements: [
+                        {
+                            type: "mrkdwn",
+                            text: "via _Linebuzz_"
+                        }
+                    ]
                 }
             ]
         }
