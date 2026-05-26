@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
             }
         }
 
-        const messageBody = {
+        const messageBody: any = {
             channel: payload.channel_id,
             username: payload.user_name,
             icon_url: payload.user_avatar_url || undefined,
@@ -85,6 +85,10 @@ Deno.serve(async (req) => {
                     ]
                 }
             ]
+        }
+
+        if (payload.parent_slack_ts) {
+            messageBody.thread_ts = payload.parent_slack_ts
         }
         const slackHeaders = {
             'Authorization': `Bearer ${payload.decrypted_token}`,
@@ -139,7 +143,6 @@ Deno.serve(async (req) => {
             await supabase
                 .from('messages')
                 .update({
-                    source: 'slack',
                     source_metadata: updatedMetadata
                 })
                 .eq('id', record.id)

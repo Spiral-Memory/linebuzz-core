@@ -33,6 +33,10 @@ CREATE FUNCTION public.get_slack_payload (
     v_quoted_source text;
     v_quoted_metadata jsonb;
 
+    -- Thread/parent variables
+    v_parent_id uuid;
+    v_parent_slack_ts text;
+
     -- Code snippet decryption variables
     v_code_snippets_json jsonb;
 begin
@@ -57,6 +61,7 @@ begin
         m.user_id, 
         m.content_ciphertext, 
         m.quoted_id,
+        m.parent_id,
         ti.access_token, 
         ti.settings->>'active_channel_id'
     into 
@@ -64,6 +69,7 @@ begin
         v_user_id, 
         v_msg_ciphertext, 
         v_quoted_id,
+        v_parent_id,
         v_token_ciphertext, 
         v_slack_channel_id
     from public.messages m
@@ -76,6 +82,16 @@ begin
             'code', 'NOT_FOUND',
             'message', 'Message or Slack integration not found.'
         );
+    end if;
+
+    --------------------------------------------------------------------
+    -- 2b. Resolve Parent Thread Timestamp (for Slack threading)
+    --------------------------------------------------------------------
+    if v_parent_id is not null then
+        select source_metadata->>'slack_event_ts'
+        into v_parent_slack_ts
+        from public.messages
+        where id = v_parent_id;
     end if;
 
     --------------------------------------------------------------------
@@ -193,6 +209,7 @@ begin
                 else null
             end,
             'code_snippets', v_code_snippets_json,
+            'parent_slack_ts', v_parent_slack_ts,
             -- Phase 2: Decrypt the Token and Message using the Data Key
             'decrypted_token', convert_from(
                 extensions.pgp_sym_decrypt_bytea(v_token_ciphertext, encode(v_data_key, 'base64')), 

@@ -93,7 +93,6 @@ Deno.serve(async (req) => {
 
             if (parentMsg) {
               parentId = parentMsg.id;
-              quotedId = parentMsg.id;
             }
           } else {
             // Case B: This is a normal message. Look for quote attachments if any.
