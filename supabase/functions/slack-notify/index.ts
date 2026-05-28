@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
         const { payload } = data
 
         // Handle quoted message
-        let finalMessage = payload.decrypted_message
+        let finalMessage = payload.decrypted_message || ''
         if (payload.quoted_message) {
             const quoteLines = payload.quoted_message.content
                 .split('\n')
@@ -146,6 +146,25 @@ Deno.serve(async (req) => {
                     source_metadata: updatedMetadata
                 })
                 .eq('id', record.id)
+
+            // Dynamic Slack Thread caching for unsynced roots
+            if (record.parent_id) {
+                const { data: parentMsg } = await supabase
+                    .from('messages')
+                    .select('source_metadata')
+                    .eq('id', record.parent_id)
+                    .maybeSingle();
+
+                const parentMetadata = parentMsg?.source_metadata || {};
+                if (!parentMetadata.slack_event_ts && !parentMetadata.slack_thread_ts) {
+                    parentMetadata.slack_thread_ts = slackData.ts;
+                    await supabase
+                        .from('messages')
+                        .update({ source_metadata: parentMetadata })
+                        .eq('id', record.parent_id);
+                    console.log('Registered slack_thread_ts on unsynced parent root:', record.parent_id);
+                }
+            }
         }
 
         return new Response(JSON.stringify({ status: 'success' }), { status: 200 })
