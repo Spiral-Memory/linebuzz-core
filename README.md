@@ -10,6 +10,7 @@
 * **Real-time Engine:** Configuration for low-latency broadcast and presence channels.
 * **Security (RLS):** Row-Level Security policies to ensure team data remains private.
 * **Auth Gateway:** GitHub OAuth configuration and user session management.
+* **Slack Integration Bridge:** Secure Deno Edge Functions enabling bi-directional message synchronization.
 
 ## **Technical Stack 🧰**
 
@@ -42,32 +43,35 @@ In a separate terminal, run:
 supabase functions serve
 ```
 
+For Slack functionality to work, populate the following variables in your local `supabase/functions/.env` file:
+```env
+SLACK_CLIENT_ID=<your-slack-client-id>
+SLACK_CLIENT_SECRET=<your-slack-client-secret>
+SLACK_SIGNING_SECRET=<your-slack-signing-secret>
+X_WEBHOOK_SECRET=<your-webhook-secret>
+```
+
 **3. Initialize Database Secrets & Data:**
 
-Run the following SQL queries in your local Supabase Studio SQL Editor:
-
-_Set the App Master Key_ (generate a key using `openssl rand -hex 16`):
+Run the following SQL queries in your local Supabase Studio SQL Editor to initialize the application master key and override the Slack OAuth redirect URL:
 
 ```sql
+-- 1. Set the App Master Key (generate a key using `openssl rand -hex 16`):
 SELECT vault.create_secret(
   '<YOUR_GENERATED_KEY>',
   'app_master_key_latest',
   'LineBuzz Team Master Key'
 );
+
+-- 2. Configure the Slack OAuth Redirect Base URL (if different from default http://localhost:3000):
+INSERT INTO internal.app_settings (key, value)
+VALUES ('slack_base_url', 'http://localhost:3000') -- Replace with your local/production URL
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 ```
 
-_Set the Seed BIP-39 Words:_
-
-```sql
-INSERT INTO internal.bip39_words (id, word)
-SELECT 
-    ordinality - 1, 
-    word
-FROM unnest(ARRAY[
-    'abandon', 'ability', 'able' /* ... Replace with your list of BIP 39 words ... */
-]) WITH ORDINALITY AS t(word, ordinality)
-ON CONFLICT (id) DO NOTHING;
-```
+> [!NOTE]
+> * BIP-39 seed words are automatically populated via the `supabase/seed.sql` script when resetting the database (`supabase db reset`), so manual seeding is not required.
+> * These SQL initialization scripts are also available as individual files in the `supabase/snippets/` directory (`set_master_key.sql` and `set_slack_oauth_url.sql`).
 
 ### **3. Database Migrations**
 
