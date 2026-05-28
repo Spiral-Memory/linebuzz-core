@@ -1,0 +1,1 @@
+ALTER PUBLICATION supabase_realtime ADD TABLE public.code_snippets, TABLE public.messages, TABLE public.team_integrations;
