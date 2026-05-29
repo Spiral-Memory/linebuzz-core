@@ -75,11 +75,27 @@ ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 
 ### **3. Database Migrations**
 
-To apply changes to the local or remote database:
+We follow a **declarative schema** approach using Supabase's `pgdelta` features. The database schema's source of truth is defined as SQL files under `supabase/database/schemas/`. 
 
-```bash
-supabase db push
-```
+To make database changes:
+
+1. **Modify the declarative schema files** directly in the `supabase/database/schemas/` directory (e.g., updating/creating SQL files under `public/tables/` or `public/functions/`).
+   * *Do not* make changes directly via the Supabase UI / dashboard.
+   * *Do not* write your own migrations from scratch in `supabase/migrations/`.
+
+2. **Generate and apply the migration locally** by running:
+   ```bash
+   supabase db schema declarative sync
+   ```
+   This command compares your declarative schema files against your current local database, prompts you for a migration name, automatically generates a versioned migration under `supabase/migrations/`, and applies it to your local database.
+
+3. **Deploy to production / remote database**:
+   ```bash
+   supabase db push
+   ```
+
+> [!TIP]
+> If your local database gets into an inconsistent state or you want to rebuild it from scratch, you can still run `supabase db reset`.
 
 ## **Contributing 🤝**
 
