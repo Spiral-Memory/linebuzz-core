@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     // 3. Process Incoming Chat Messages
     const ev = body.event;
-    if (ev?.type === "message" && ev.text && ev.user && !ev.bot_id && !ev.subtype) {
+    if (ev?.type === "message" && ev.user && !ev.bot_id && !ev.subtype) {
       // Find connected team ID
       const { data: int, error: intError } = await supabase
         .from("team_integrations")
@@ -87,13 +87,12 @@ Deno.serve(async (req) => {
             // Case A: This is a thread reply.
             const { data: parentMsg } = await supabase
               .from("messages")
-              .select("id")
+              .select("id, parent_id")
               .eq("source_metadata->>slack_event_ts", ev.thread_ts)
               .maybeSingle();
 
             if (parentMsg) {
-              parentId = parentMsg.id;
-              quotedId = parentMsg.id;
+              parentId = parentMsg.parent_id || parentMsg.id;
             }
           } else {
             // Case B: This is a normal message. Look for quote attachments if any.
@@ -121,7 +120,7 @@ Deno.serve(async (req) => {
           // Securely encrypt and insert bridged message
           const { data: insertRes, error: insertError } = await supabase.rpc("insert_slack_message", {
             p_team_id: int.team_id,
-            p_content: ev.text,
+            p_content: ev.text || "",
             p_source_metadata: {
               display_name: name,
               username: name,

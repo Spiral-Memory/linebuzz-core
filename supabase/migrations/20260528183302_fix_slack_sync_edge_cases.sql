@@ -1,11 +1,10 @@
-CREATE FUNCTION public.get_slack_payload (
-  p_message_id uuid
-)
-  RETURNS jsonb
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path TO 'public', 'internal', 'extensions', 'vault'
-  AS $function$declare
+SET check_function_bodies = false;
+CREATE OR REPLACE FUNCTION public.get_slack_payload(p_message_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'internal', 'extensions', 'vault'
+AS $function$declare
     -- Context Variables
     v_team_id uuid;
     v_user_id uuid;
@@ -222,9 +221,3 @@ begin
         )
     );
 end;$function$;
-
-GRANT ALL ON FUNCTION public.get_slack_payload(uuid) TO anon;
-
-GRANT ALL ON FUNCTION public.get_slack_payload(uuid) TO authenticated;
-
-GRANT ALL ON FUNCTION public.get_slack_payload(uuid) TO service_role;

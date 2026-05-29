@@ -1,5 +1,6 @@
-CREATE FUNCTION public.get_messages (
+CREATE FUNCTION public.get_thread_messages (
   p_team_id   uuid,
+  p_thread_id uuid,
   p_limit     integer,
   p_anchor_id uuid    DEFAULT NULL::uuid,
   p_direction text    DEFAULT 'before'::text
@@ -16,7 +17,7 @@ CREATE FUNCTION public.get_messages (
     v_master_key text;
 
     v_rows jsonb := '[]'::jsonb;
-    v_total_count int := 0; 
+    v_total_count int := 0;
     v_anchor_ts timestamptz;
 begin
     --------------------------------------------------------------------
@@ -49,8 +50,8 @@ begin
     -- 3. Resolve Anchor Coordinates
     --------------------------------------------------------------------
     if p_anchor_id is not null then
-        select created_at into v_anchor_ts 
-        from messages 
+        select created_at into v_anchor_ts
+        from messages
         where id = p_anchor_id and team_id = p_team_id;
     end if;
 
@@ -78,21 +79,21 @@ begin
     v_data_key := pgp_sym_decrypt_bytea(v_enc_dk, v_master_key);
 
     --------------------------------------------------------------------
-    -- 4. Get Total Count (top-level only)
+    -- 5. Get Total Count (replies to this thread only)
     --------------------------------------------------------------------
     select count(*)
     into v_total_count
     from messages
     where team_id = p_team_id
-      and parent_id is null;
+      and parent_id = p_thread_id;
 
     --------------------------------------------------------------------
-    -- 5. Fetch + Decrypt Messages (Unified Directional Query)
+    -- 6. Fetch + Decrypt Thread Messages (Unified Directional Query)
     --------------------------------------------------------------------
     select jsonb_agg(sub_final.msg_obj order by sub_final.created_at ASC)
     into v_rows
     from (
-        select 
+        select
             m_filtered.created_at,
             jsonb_build_object(
                 'message_id', m_filtered.id,
@@ -121,20 +122,15 @@ begin
                 ),
                 'parent_id', m_filtered.parent_id,
                 'thread_id', m_filtered.thread_id,
-                'reply_count', (
-                    select count(*)
-                    from messages r
-                    where r.parent_id = m_filtered.id
-                ),
-                'content', case 
-                    when m_filtered.content_ciphertext is not null 
+                'content', case
+                    when m_filtered.content_ciphertext is not null
                     then convert_from(extensions.pgp_sym_decrypt_bytea(m_filtered.content_ciphertext, encode(v_data_key, 'base64')), 'utf8')
-                    else null 
+                    else null
                 end,
                 'attachments', (
                     select coalesce(jsonb_agg(
                         jsonb_build_object(
-                            'id', s.id, 
+                            'id', s.id,
                             'type', 'code',
                             'remote_url', s.remote_url,
                             'ref', s.ref,
@@ -159,14 +155,14 @@ begin
                 )
             ) as msg_obj
         from (
-            -- Sub-query handles the high-performance directional seek (top-level messages only)
+            -- Sub-query handles the high-performance directional seek (thread replies only)
             select id, created_at, user_id, content_ciphertext, parent_id, thread_id, quoted_id, source, source_metadata
             from (
                 (
                     select id, created_at, user_id, content_ciphertext, parent_id, thread_id, quoted_id, source, source_metadata
                     from messages
                     where team_id = p_team_id
-                      and parent_id is null
+                      and parent_id = p_thread_id
                       and p_direction IN ('before', 'around')
                       and (v_anchor_ts is null or (created_at, id) < (v_anchor_ts, p_anchor_id))
                     order by created_at DESC, id DESC
@@ -177,7 +173,7 @@ begin
                     select id, created_at, user_id, content_ciphertext, parent_id, thread_id, quoted_id, source, source_metadata
                     from messages
                     where id = p_anchor_id
-                      and parent_id is null
+                      and parent_id = p_thread_id
                       and p_direction = 'around'
                 )
                 UNION ALL
@@ -185,9 +181,9 @@ begin
                     select id, created_at, user_id, content_ciphertext, parent_id, thread_id, quoted_id, source, source_metadata
                     from messages
                     where team_id = p_team_id
-                      and parent_id is null
+                      and parent_id = p_thread_id
                       and p_direction IN ('after', 'around')
-                      and v_anchor_ts is not null 
+                      and v_anchor_ts is not null
                       and (created_at, id) > (v_anchor_ts, p_anchor_id)
                     order by created_at ASC, id ASC
                     limit p_limit
@@ -199,7 +195,7 @@ begin
     ) sub_final;
 
     --------------------------------------------------------------------
-    -- 6. Wrap inside success JSONB
+    -- 7. Wrap inside success JSONB
     --------------------------------------------------------------------
     return jsonb_build_object(
         'status', 'success',
@@ -216,8 +212,8 @@ begin
     );
 end;$function$;
 
-GRANT ALL ON FUNCTION public.get_messages(uuid, integer, uuid, text) TO anon;
+GRANT ALL ON FUNCTION public.get_thread_messages(uuid, uuid, integer, uuid, text) TO anon;
 
-GRANT ALL ON FUNCTION public.get_messages(uuid, integer, uuid, text) TO authenticated;
+GRANT ALL ON FUNCTION public.get_thread_messages(uuid, uuid, integer, uuid, text) TO authenticated;
 
-GRANT ALL ON FUNCTION public.get_messages(uuid, integer, uuid, text) TO service_role;
+GRANT ALL ON FUNCTION public.get_thread_messages(uuid, uuid, integer, uuid, text) TO service_role;
