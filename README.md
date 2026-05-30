@@ -49,6 +49,7 @@ SLACK_CLIENT_ID=<your-slack-client-id>
 SLACK_CLIENT_SECRET=<your-slack-client-secret>
 SLACK_SIGNING_SECRET=<your-slack-signing-secret>
 X_WEBHOOK_SECRET=<your-webhook-secret>
+LINEBUZZ_PAGE_URL=<your-hosted-pages-url>
 ```
 
 **3. Initialize Database Secrets & Data:**
@@ -100,5 +101,5 @@ To make database changes:
 ## **Contributing 🤝**
 
 Contributions are always welcome.
-Fork the repository, open it in your preferred editor, and use the Supabase CLI to manage migrations.
+Fork the repository, open it in your favorite editor, and use the Supabase CLI to manage migrations.
 For significant updates, open an issue first to discuss your approach.

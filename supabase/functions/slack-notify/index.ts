@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const WEBHOOK_SECRET = Deno.env.get('X_WEBHOOK_SECRET')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const LINEBUZZ_PAGE_URL = (Deno.env.get('LINEBUZZ_PAGE_URL') || 'http://localhost:5500').trim()
 
 Deno.serve(async (req) => {
     try {
@@ -56,8 +57,8 @@ Deno.serve(async (req) => {
                     githubLink = `<${cleanUrl}/blob/main/${snip.file_path}#L${snip.start_line}-L${snip.end_line}|Open on GitHub>`
                 }
 
-                const vscodeLink = `<vscode://SpiralMemory.linebuzz/open?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}|Open in VS Code>`
-                const links = [vscodeLink, githubLink].filter(Boolean).join(' | ')
+                const ideLink = `<${LINEBUZZ_PAGE_URL}/pages/open-in-ide/?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}|Open in IDE>`
+                const links = [ideLink, githubLink].filter(Boolean).join(' | ')
 
                 finalMessage += `\n\n*Ref: ${snip.file_path}:${snip.start_line}-${snip.end_line})*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
             }

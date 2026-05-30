@@ -7,12 +7,16 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 Deno.serve(async (req) => {
+  const LINEBUZZ_PAGE_URL = Deno.env.get("LINEBUZZ_PAGE_URL");
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
 
+  const [stateId, scheme] = (state || "").split(":");
+  const finalScheme = scheme || "vscode";
+
   if (!code || !state) {
-    return new Response("Error: Missing code or state.", { status: 400 });
+    return Response.redirect(`${LINEBUZZ_PAGE_URL}/pages/slack-auth/?status=failed&error=missing_code_or_state`, 302);
   }
 
   try {
@@ -27,7 +31,9 @@ Deno.serve(async (req) => {
     });
 
     const oauthData = await slackRes.json();
-    if (!oauthData.ok) return new Response(`OAuth Error: ${oauthData.error}`, { status: 400 });
+    if (!oauthData.ok) {
+      return Response.redirect(`${LINEBUZZ_PAGE_URL}/pages/slack-auth/?status=failed&error=${encodeURIComponent(oauthData.error || "oauth_failed")}`, 302);
+    }
 
     const accessToken = oauthData.access_token;
 
@@ -44,22 +50,20 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data, error } = await supabase.rpc("install_slack", {
-      p_state: state,
+      p_state: stateId,
       p_access_token: accessToken,
       p_channels: channelList
     });
 
     if (error || data?.status === "error") {
       console.log(error)
-      return new Response(data?.message || "Verification failed.", { status: 403 });
+      return Response.redirect(`${LINEBUZZ_PAGE_URL}/pages/slack-auth/?status=failed&error=${encodeURIComponent(data?.message || "verification_failed")}`, 302);
     }
 
-    return new Response("Success! Linebuzz is now connected to Slack. You can safely close this tab and return to your IDE to select your sync channel.", {
-      status: 200,
-      headers: { "Content-Type": "text/plain" }
-    });
+    const redirectUri = `${finalScheme}://SpiralMemory.linebuzz/slack-auth-success`;
+    return Response.redirect(`${LINEBUZZ_PAGE_URL}/pages/slack-auth/?status=success&redirect_uri=${encodeURIComponent(redirectUri)}`, 302);
 
   } catch (err) {
-    return new Response("Internal Server Error", { status: 500 });
+    return Response.redirect(`${LINEBUZZ_PAGE_URL}/pages/slack-auth/?status=failed&error=internal_error`, 302);
   }
 });
