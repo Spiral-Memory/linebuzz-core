@@ -49,6 +49,7 @@ SLACK_CLIENT_ID=<your-slack-client-id>
 SLACK_CLIENT_SECRET=<your-slack-client-secret>
 SLACK_SIGNING_SECRET=<your-slack-signing-secret>
 X_WEBHOOK_SECRET=<your-webhook-secret>
+LINEBUZZ_PAGE_URL=<your-hosted-pages-url>
 ```
 
 **3. Initialize Database Secrets & Data:**
