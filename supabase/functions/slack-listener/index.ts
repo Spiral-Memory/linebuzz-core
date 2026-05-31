@@ -95,7 +95,9 @@ Deno.serve(async (req) => {
               parentId = parentMsg.parent_id || parentMsg.id;
             }
           } else {
-            // Case B: This is a normal message. Look for quote attachments if any.
+            // Case B: This is a normal message. 
+
+            // Look for quote attachments if any.
             const quotedAttachment = ev.attachments?.find((att: any) => att.from_url);
 
             if (quotedAttachment?.from_url) {
@@ -116,11 +118,57 @@ Deno.serve(async (req) => {
               }
             }
           }
+          
+          // Resolve user and channel mentions
+          let resolvedText = ev.text || "";
+          const userMentions = [...resolvedText.matchAll(/<@(U[A-Z0-9]+)>/g)].map(m => m[1]);
+          const channelMentions = [...resolvedText.matchAll(/<#(C[A-Z0-9]+)>/g)].map(m => m[1]);
 
-          // Securely encrypt and insert bridged message
+          const userReplacements = await Promise.all(userMentions.map(async (uId) => {
+            try {
+              const res = await fetch(`https://slack.com/api/users.info?user=${uId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              }).then(r => r.json());
+              if (res.ok && res.user) {
+                const name = res.user.profile?.display_name || res.user.profile?.real_name || res.user.name;
+                return { uId, name };
+              }
+            } catch (e) {
+              console.error("Error resolving user mention:", e);
+            }
+            return { uId, name: null };
+          }));
+
+          const channelReplacements = await Promise.all(channelMentions.map(async (cId) => {
+            try {
+              const res = await fetch(`https://slack.com/api/conversations.info?channel=${cId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+              }).then(r => r.json());
+              if (res.ok && res.channel) {
+                return { cId, name: res.channel.name };
+              }
+            } catch (e) {
+              console.error("Error resolving channel mention:", e);
+            }
+            return { cId, name: null };
+          }));
+
+          for (const rep of userReplacements) {
+            if (rep.name) {
+              resolvedText = resolvedText.replaceAll(`<@${rep.uId}>`, `<@${rep.uId}|${rep.name}>`);
+            }
+          }
+
+          for (const rep of channelReplacements) {
+            if (rep.name) {
+              resolvedText = resolvedText.replaceAll(`<#${rep.cId}>`, `<#${rep.cId}|${rep.name}>`);
+            }
+          }
+
+          // Insert the resolved message into the messages table
           const { data: insertRes, error: insertError } = await supabase.rpc("insert_slack_message", {
             p_team_id: int.team_id,
-            p_content: ev.text || "",
+            p_content: resolvedText,
             p_source_metadata: {
               display_name: name,
               username: name,
