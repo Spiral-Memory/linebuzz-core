@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
                     githubLink = `<${cleanUrl}/blob/main/${snip.file_path}#L${snip.start_line}-L${snip.end_line}|Open on GitHub>`
                 }
 
-                const ideLink = `<${LINEBUZZ_PAGE_URL}/open-in-ide/?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}|Open in IDE>`
+                const ideLink = `<${LINEBUZZ_PAGE_URL}/open-in-ide/?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}&remoteUrl=${encodeURIComponent(snip.remote_url || '')}|Open in IDE>`
                 const links = [ideLink, githubLink].filter(Boolean).join(' | ')
 
                 finalMessage += `\n\n*Ref: ${snip.file_path}:${snip.start_line}-${snip.end_line})*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
