@@ -383,6 +383,7 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 
 [functions.auth-exchange]
 enabled = true
+verify_jwt = false
 entrypoint = "./functions/auth-exchange/index.ts"
 
 [functions.slack-listener]
