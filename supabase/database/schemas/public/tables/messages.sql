@@ -15,13 +15,6 @@ CREATE TABLE public.messages (
 
 CREATE INDEX idx_messages_pagination ON public.messages (team_id, created_at DESC, id DESC);
 
-CREATE TRIGGER "slack-notify-trigger" AFTER INSERT ON public.messages
-  FOR EACH ROW
-  WHEN (new.sync_to_slack = true)
-  EXECUTE FUNCTION
-    supabase_functions.http_request('http://host.docker.internal:54321/functions/v1/slack-notify', 'POST', '{"content-type":"application/json","x-webhook-secret":"test_secret"}',
-    '{}', '5000');
-
 CREATE POLICY "team members can read messages" ON public.messages
   FOR SELECT
   USING ((EXISTS ( SELECT 1
