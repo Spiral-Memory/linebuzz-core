@@ -1,13 +1,9 @@
-DROP TRIGGER IF EXISTS "slack-notify-trigger" ON public.messages;
+SELECT vault.create_secret(
+  '<YOUR-SLACK-WEBHOOK-SECRET>',
+  'slack_webhook_secret',
+  'Slack Notify Webhook Secret'
+);
 
-CREATE TRIGGER "slack-notify-trigger"
-  AFTER INSERT ON public.messages
-  FOR EACH ROW
-  WHEN (new.sync_to_slack = true)
-  EXECUTE FUNCTION supabase_functions.http_request(
-    '<YOUR-SLACK-NOTIFY-EDGE-FUNCTION-URL>',
-    'POST',
-    '{"content-type":"application/json","x-webhook-secret":"<YOUR-SLACK-WEBHOOK-SECRET>"}',
-    '{}',
-    '5000'
-  );
+INSERT INTO internal.app_settings (key, value)
+VALUES ('slack_webhook_url', '<YOUR-SLACK-NOTIFY-EDGE-FUNCTION-URL>')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;

@@ -15,6 +15,11 @@ CREATE TABLE public.messages (
 
 CREATE INDEX idx_messages_pagination ON public.messages (team_id, created_at DESC, id DESC);
 
+CREATE TRIGGER "slack-notify-trigger" AFTER INSERT ON public.messages
+  FOR EACH ROW
+  WHEN (new.sync_to_slack = true)
+  EXECUTE FUNCTION internal.handle_slack_notify_trigger();
+
 CREATE POLICY "team members can read messages" ON public.messages
   FOR SELECT
   USING ((EXISTS ( SELECT 1

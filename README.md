@@ -68,11 +68,22 @@ SELECT vault.create_secret(
 INSERT INTO internal.app_settings (key, value)
 VALUES ('slack_base_url', 'http://localhost:3000') -- Replace with your local/production URL
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- 3. Configure the Slack Webhook Secret and Notification URL:
+SELECT vault.create_secret(
+  '<YOUR-SLACK-WEBHOOK-SECRET>',
+  'slack_webhook_secret',
+  'Slack Notify Webhook Secret'
+);
+
+INSERT INTO internal.app_settings (key, value)
+VALUES ('slack_webhook_url', 'http://host.docker.internal:54321/functions/v1/slack-notify') -- Replace with your local/production URL
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
 ```
 
 > [!NOTE]
 > * BIP-39 seed words are automatically populated via the `supabase/seed.sql` script when resetting the database (`supabase db reset`), so manual seeding is not required.
-> * These SQL initialization scripts are also available as individual files in the `supabase/snippets/` directory (`set_master_key.sql` and `set_slack_oauth_url.sql`).
+> * These SQL initialization scripts are also available as individual files in the `supabase/snippets/` directory (`set_master_key.sql`, `set_slack_oauth_url.sql`, and `set_slack_notify_trigger.sql`).
 
 ### **3. Database Migrations**
 
