@@ -6,6 +6,7 @@ CREATE FUNCTION public.get_message_by_id (
   LANGUAGE plpgsql
   STABLE
   SECURITY DEFINER
+  SET search_path TO 'public', 'extensions', 'vault', 'pg_catalog'
   AS $function$declare
     v_user_id uuid := auth.uid();
 

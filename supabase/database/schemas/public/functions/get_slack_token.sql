@@ -22,7 +22,7 @@ begin
     -- 2. Fetch the ciphertext of the token
     --------------------------------------------------------------------
     select access_token into v_token_ciphertext
-    from public.team_integrations
+    from public.team_integration_tokens
     where team_id = p_team_id and provider = 'slack';
 
     if v_token_ciphertext is null then

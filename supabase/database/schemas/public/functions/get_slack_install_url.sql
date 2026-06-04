@@ -4,6 +4,7 @@ CREATE FUNCTION public.get_slack_install_url (
   RETURNS jsonb
   LANGUAGE plpgsql
   SECURITY DEFINER
+  SET search_path TO 'public', 'internal', 'pg_catalog'
   AS $function$
 declare
     v_state_id uuid;

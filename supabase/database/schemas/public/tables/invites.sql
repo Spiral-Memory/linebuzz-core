@@ -2,7 +2,8 @@ CREATE TABLE public.invites (
   id         uuid DEFAULT gen_random_uuid() NOT NULL,
   team_id    uuid NOT NULL,
   code       text NOT NULL,
-  created_by uuid NOT NULL
+  created_by uuid NOT NULL,
+  encrypted_code bytea
 );
 
 ALTER TABLE public.invites

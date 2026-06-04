@@ -4,7 +4,7 @@ CREATE FUNCTION public.disconnect_slack (
   RETURNS jsonb
   LANGUAGE plpgsql
   SECURITY DEFINER
-  SET search_path TO 'public', 'internal'
+  SET search_path TO 'public', 'internal', 'pg_catalog'
   AS $function$
 declare
     v_user_id uuid := auth.uid();
@@ -41,6 +41,9 @@ begin
     -- 3. Delete Integration & Remove Slack Bot user from team members
     --------------------------------------------------------------------
     delete from public.team_integrations
+    where team_id = p_team_id and provider = 'slack';
+
+    delete from public.team_integration_tokens
     where team_id = p_team_id and provider = 'slack';
 
     select value::uuid into v_bot_id from internal.app_settings where key = 'slack_bot_id';

@@ -4,6 +4,7 @@ CREATE FUNCTION public.join_team_with_code (
   RETURNS jsonb
   LANGUAGE plpgsql
   SECURITY DEFINER
+  SET search_path TO 'public', 'extensions', 'pg_catalog'
   AS $function$declare
     team_to_join_id uuid;
     current_user_id uuid := auth.uid();

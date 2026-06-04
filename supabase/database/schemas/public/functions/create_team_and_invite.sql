@@ -4,6 +4,7 @@ CREATE FUNCTION public.create_team_and_invite (
   RETURNS jsonb
   LANGUAGE plpgsql
   SECURITY DEFINER
+  SET search_path TO 'public', 'internal', 'extensions', 'vault', 'pg_catalog'
   AS $function$declare
     new_team_id uuid;
     invite_code text;
@@ -73,11 +74,12 @@ begin
         ) AS secure_words;
 
         begin
-            insert into public.invites (team_id, code, created_by)
+            insert into public.invites (team_id, code, created_by, encrypted_code)
             values (
                 new_team_id, 
                 extensions.crypt(invite_code, extensions.gen_salt('bf')), 
-                current_user_id
+                current_user_id,
+                extensions.pgp_sym_encrypt(invite_code, encode(v_data_key, 'base64'))
             );
 
             is_code_unique := true;

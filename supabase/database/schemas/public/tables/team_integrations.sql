@@ -1,7 +1,6 @@
 CREATE TABLE public.team_integrations (
   team_id      uuid                     NOT NULL,
   provider     text                     NOT NULL,
-  access_token bytea                    NOT NULL,
   settings     jsonb                    DEFAULT '{}'::jsonb,
   created_at   timestamp with time zone DEFAULT now(),
   updated_at   timestamp with time zone DEFAULT now()

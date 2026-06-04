@@ -62,7 +62,7 @@ begin
         m.content_ciphertext, 
         m.quoted_id,
         m.parent_id,
-        ti.access_token, 
+        tok.access_token, 
         ti.settings->>'active_channel_id'
     into 
         v_team_id, 
@@ -74,6 +74,7 @@ begin
         v_slack_channel_id
     from public.messages m
     join public.team_integrations ti on m.team_id = ti.team_id
+    left join public.team_integration_tokens tok on tok.team_id = ti.team_id and tok.provider = ti.provider
     where m.id = p_message_id and ti.provider = 'slack';
 
     if not found then

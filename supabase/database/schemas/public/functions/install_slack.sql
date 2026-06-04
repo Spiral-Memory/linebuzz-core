@@ -84,13 +84,11 @@ begin
     insert into public.team_integrations (
         team_id, 
         provider, 
-        access_token, 
         settings
     )
     values (
         v_team_id,
         'slack',
-        v_encrypted_token,
         jsonb_build_object(
             'channels', p_channels,
             'active_channel_id', null
@@ -98,8 +96,21 @@ begin
     )
     on conflict (team_id, provider) 
     do update set 
-        access_token = excluded.access_token,
         settings = excluded.settings,
+        updated_at = now();
+
+    insert into public.team_integration_tokens (
+        team_id,
+        provider,
+        access_token
+    ) values (
+        v_team_id,
+        'slack',
+        v_encrypted_token
+    )
+    on conflict (team_id, provider)
+    do update set
+        access_token = excluded.access_token,
         updated_at = now();
 
     --------------------------------------------------------------------

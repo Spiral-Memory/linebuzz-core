@@ -9,6 +9,7 @@ CREATE FUNCTION public.create_message (
   RETURNS jsonb
   LANGUAGE plpgsql
   SECURITY DEFINER
+  SET search_path TO 'public', 'internal', 'extensions', 'vault', 'pg_catalog'
   AS $function$declare
     v_user_id uuid := auth.uid();
     v_avatar_url text;
