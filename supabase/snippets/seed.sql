@@ -1,11 +1,3 @@
--- ============================================================================
--- LINEBUZZ DATABASE SEED SCRIPT
--- ============================================================================
--- This file is automatically executed by Supabase CLI during database resets:
--- `supabase db reset`
--- ============================================================================
-
--- ----------------------------------------------------------------------------
 -- 1. Seed BIP-39 Words (internal.bip39_words)
 -- ----------------------------------------------------------------------------
 -- Essential seed data representing the full list of 2048 BIP-39 mnemonic words.
@@ -23,7 +15,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ----------------------------------------------------------------------------
 -- 2. Seed Default Slack Bot User (auth.users)
 -- ----------------------------------------------------------------------------
--- Standard bot account inserted into Auth schema
+-- Standard bot account inserted into Auth schema 
 -- Also registers the bot ID in internal.app_settings.
 INSERT INTO auth.users (
   id,
@@ -62,6 +54,7 @@ INSERT INTO internal.app_settings (key, value)
 VALUES ('slack_bot_id', '00000000-0000-0000-0000-000000000001')
 ON CONFLICT (key) 
 DO UPDATE SET value = EXCLUDED.value;
+
 
 -- ----------------------------------------------------------------------------
 -- 3. Schedule Cron Tasks (pg_cron)
