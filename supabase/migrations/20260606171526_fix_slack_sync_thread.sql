@@ -1,5 +1,10 @@
+SET check_function_bodies = false;
 CREATE OR REPLACE FUNCTION internal.handle_slack_notify_trigger()
-RETURNS TRIGGER AS $$
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'internal', 'vault', 'extensions', 'pg_catalog'
+AS $function$
 DECLARE
   target_url TEXT;
   webhook_secret TEXT;
@@ -29,4 +34,4 @@ BEGIN
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'internal', 'vault', 'extensions', 'pg_catalog';
+$function$;
