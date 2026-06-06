@@ -79,11 +79,18 @@ SELECT vault.create_secret(
 INSERT INTO internal.app_settings (key, value)
 VALUES ('slack_webhook_url', '<YOUR-SLACK-NOTIFY-EDGE-FUNCTION-URL>') -- Replace with your local/production URL (e.g. for local: http://host.docker.internal:54321/functions/v1/slack-notify)
 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+-- 4. Set the Minimum Client Version constraint for extension compatibility:
+INSERT INTO public.app_metadata (id, min_client_version)
+VALUES (true, '<MIN_SUPPORTED_CLIENT_VERSION>')
+ON CONFLICT (id)
+DO UPDATE SET
+    min_client_version = EXCLUDED.min_client_version;
 ```
 
 > [!NOTE]
 > * Other required configurations, like BIP-39 seed words, default bots, and cron jobs, are automatically populated via the `supabase/seed.sql` script when resetting the database (`supabase db reset`), so manual seeding is not required.
-> * These SQL initialization scripts are also available as individual files in the `supabase/snippets/` directory (`seed.sql`, `set_master_key.sql`, `set_slack_oauth_url.sql`, and `set_slack_notify_trigger.sql`).
+> * These SQL initialization scripts are also available as individual files in the `supabase/snippets/` directory (`seed.sql`, `set_master_key.sql`, `set_slack_oauth_url.sql`, `set_slack_notify_trigger.sql`, and `set_min_client_version.sql`).
 
 ### **3. Database Migrations**
 

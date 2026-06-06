@@ -1564,7 +1564,6 @@ ALTER TABLE public.messages ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
 ALTER TABLE public.code_snippets ADD CONSTRAINT code_context_message_id_fkey FOREIGN KEY (message_id) REFERENCES public.messages(id) ON UPDATE CASCADE ON DELETE CASCADE;
 ALTER TABLE public.messages ADD CONSTRAINT messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
 CREATE INDEX idx_messages_pagination ON public.messages (team_id, created_at DESC, id DESC);
-CREATE TRIGGER "slack-notify-trigger" AFTER INSERT ON public.messages FOR EACH ROW WHEN (new.sync_to_slack = true) EXECUTE FUNCTION supabase_functions.http_request('http://host.docker.internal:54321/functions/v1/slack-notify', 'POST', '{"content-type":"application/json","x-webhook-secret":"test_secret"}', '{}', '5000');
 CREATE TABLE public.team_data_keys (encrypted_data_key bytea NOT NULL, updated_at timestamp with time zone DEFAULT now(), team_id uuid NOT NULL);
 ALTER TABLE public.team_data_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.team_data_keys ADD CONSTRAINT team_data_keys_pkey PRIMARY KEY (team_id);
