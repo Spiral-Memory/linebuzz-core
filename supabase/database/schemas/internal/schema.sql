@@ -1,0 +1,1 @@
+CREATE SCHEMA internal AUTHORIZATION postgres;

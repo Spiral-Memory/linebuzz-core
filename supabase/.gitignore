@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# test_queries
+snippets/test_query.sql
