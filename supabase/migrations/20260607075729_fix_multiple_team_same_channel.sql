@@ -1,12 +1,10 @@
-CREATE FUNCTION public.set_slack_channel (
-  p_team_id    uuid,
-  p_channel_id text
-)
-  RETURNS jsonb
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path TO 'public'
-  AS $function$declare
+SET check_function_bodies = false;
+CREATE OR REPLACE FUNCTION public.set_slack_channel(p_team_id uuid, p_channel_id text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$declare
     v_user_id uuid := auth.uid();
     v_role text;
 begin
@@ -69,9 +67,3 @@ begin
         'message', 'Active channel updated successfully.'
     );
 end;$function$;
-
-GRANT ALL ON FUNCTION public.set_slack_channel(uuid, text) TO anon;
-
-GRANT ALL ON FUNCTION public.set_slack_channel(uuid, text) TO authenticated;
-
-GRANT ALL ON FUNCTION public.set_slack_channel(uuid, text) TO service_role;
