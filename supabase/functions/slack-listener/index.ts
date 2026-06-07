@@ -4,7 +4,7 @@ import { encodeHex } from "https://deno.land/std@0.207.0/encoding/hex.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const SLACK_SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET") || Deno.env.get("SLACK_CLIENT_SECRET")!;
+const SLACK_SIGNING_SECRET = Deno.env.get("SLACK_SIGNING_SECRET")!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
