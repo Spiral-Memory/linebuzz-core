@@ -18,6 +18,8 @@
   "homepage": "https://github.com/Spiral-Memory/linebuzz-core#readme",
   "devDependencies": {
     "@supabase/supabase-js": "^2.106.1",
-    "@types/node": "*"
+    "@types/node": "*",
+    "dotenv": "^16.0.3",
+    "pg": "^8.11.0"
   }
 }
