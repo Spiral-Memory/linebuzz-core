@@ -17,7 +17,11 @@
 * **Backend:** Supabase (PostgreSQL, Real-time, Auth).
 * **Language:** TypeScript / SQL.
 
-## **Setup & Deployment 🛠️**
+## **Deployment & Self-Hosting 🚀**
+
+For automated deployment to your own local self-hosted server or a cloud database, refer to our [Self-Hosted & Cloud Deployment Guide](./scripts/README.md).
+
+## **Development 🛠️**
 
 ### **1. Prerequisites**
 
