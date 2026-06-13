@@ -1,6 +1,6 @@
 {
   "name": "linebuzz-core",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "the engine for linebuzz",
   "main": "index.js",
   "scripts": {
@@ -18,6 +18,8 @@
   "homepage": "https://github.com/Spiral-Memory/linebuzz-core#readme",
   "devDependencies": {
     "@supabase/supabase-js": "^2.106.1",
-    "@types/node": "*"
+    "@types/node": "*",
+    "dotenv": "^16.0.3",
+    "pg": "^8.11.0"
   }
 }

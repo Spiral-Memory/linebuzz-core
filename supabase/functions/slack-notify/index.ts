@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
                 const ideLink = `<${LINEBUZZ_PAGE_URL}/open-in-ide/?filePath=${encodeURIComponent(snip.file_path)}&startLine=${snip.start_line}&endLine=${snip.end_line}&remoteUrl=${encodeURIComponent(snip.remote_url || '')}|Open in IDE>`
                 const links = [ideLink, githubLink].filter(Boolean).join(' | ')
 
-                finalMessage += `\n\n*Ref: ${snip.file_path}:${snip.start_line}-${snip.end_line})*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
+                finalMessage += `\n\n*Ref: ${snip.file_path}:${snip.start_line}-${snip.end_line}*\n\`\`\`${extension}\n${snip.content}\n\`\`\`\n${links}`
             }
         }
 
