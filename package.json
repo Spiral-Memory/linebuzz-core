@@ -1,6 +1,6 @@
 {
   "name": "linebuzz-core",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "the engine for linebuzz",
   "main": "index.js",
   "scripts": {

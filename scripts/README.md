@@ -20,6 +20,12 @@ Ensure you have the following installed on your target deployment machine:
 
 ## **Setup 🚀**
 
+Clone the repository and navigate into it:
+```bash
+git clone -b main https://github.com/Spiral-Memory/linebuzz-core.git
+cd linebuzz-core
+```
+
 Choose the scenario below that matches your deployment target:
 
 ### **A. Spin Up a New Local Self-Hosted Supabase Instance**
